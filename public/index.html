@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Toponomastiku Wiki</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="ui-container">
+        <div class="glass-card main-panel">
+            <header><h1>Toponomastiku</h1></header>
+        </div>
+        <div class="glass-card layer-panel">
+            <div class="layer-item"><input type="checkbox" checked onchange="toggleLayer('Local Council', this)"> <span>Local Council</span></div>
+            <div class="layer-item sub-layer"><input type="checkbox" checked onchange="toggleLayer('Boundaries', this)"> <span>Boundaries</span></div>
+            <div class="layer-item"><input type="checkbox" checked onchange="toggleLayer('Zone Names', this)"> <span>Zone Names</span></div>
+            <div class="layer-item"><input type="checkbox" checked onchange="toggleLayer('Place Names', this)"> <span>Place Names</span></div>
+        </div>
+    </div>
+    <div id="mapid"></div>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
