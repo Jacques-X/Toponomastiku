@@ -3,162 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toponomastiku Pro | Malta GIS</title>
+    <title>Toponomastiku Pro</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
     <link href="https://unpkg.com/@heroicons/v1/outline/style.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css" />
 </head>
-<body class="lang-mt"> <div id="mapid"></div>
+<body class="lang-mt">
+    
+    <div id="mapid"></div>
 
     <div class="ui-wrapper pointer-events-none">
+        
         <aside class="sidebar pointer-events-auto">
             <header class="sidebar-header">
                 <div class="logo-area">
                     <i class="hi-outline hi-map big-icon"></i>
                     <h1>Toponomastiku</h1>
                 </div>
-                <p>
-                    <span class="text-mt">Wiki GIS Ibrida Verżjoni 3.0</span>
-                    <span class="text-en">Hybrid GIS Wiki v3.0</span>
-                </p>
+                <p>Wiki GIS Pro v3.8</p>
             </header>
 
             <div class="control-group">
-                <label>
-                    <i class="hi-outline hi-clock"></i> 
-                    <span class="text-mt">Kronoloġija</span>
-                    <span class="text-en">Timeline</span>
-                </label>
-                <div class="select-wrapper">
-                    <select onchange="changeBaseLayer(this.value)" id="year-select">
-                        <option value="current">Current Satellite (ESRI)</option>
-                        <option value="2018">PA Orthophoto 2018</option>
-                        <option value="2012">PA Orthophoto 2012</option>
-                        <option value="1896">Ordnance Survey 1896</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="control-group">
-                <label>
-                    <i class="hi-outline hi-search"></i> 
-                    <span class="text-mt">Fittex</span>
-                    <span class="text-en">Search</span>
-                </label>
-                <div class="search-wrapper">
-                    <input type="text" id="map-search" placeholder="...">
-                </div>
+                <label><span class="text-mt">Fittex</span><span class="text-en">Search</span></label>
+                <input type="text" id="map-search" placeholder="...">
             </div>
 
             <nav class="layer-manager">
-                <label>
-                    <i class="hi-outline hi-layers"></i> 
-                    <span class="text-mt">Saffi tad-Data</span>
-                    <span class="text-en">Data Layers</span>
-                </label>
-                
+                <label>Layers</label>
                 <div class="layer-card">
                     <div class="layer-header">
-                        <span class="layer-title">
-                            <span class="text-mt">Kunsilli Lokali</span>
-                            <span class="text-en">Local Councils</span>
-                        </span>
+                        <span class="layer-title">Councils</span>
                         <label class="switch"><input type="checkbox" checked onchange="toggleLayer('Local Council', this)"><span class="slider"></span></label>
                     </div>
-                    <div class="layer-sub">
-                        <label class="sub-checkbox">
-                            <input type="checkbox" checked onchange="toggleLayer('Boundaries', this)">
-                            <span>
-                                <span class="text-mt">Fruntieri Amministrattivi</span>
-                                <span class="text-en">Administrative Borders</span>
-                            </span>
-                        </label>
-                    </div>
                 </div>
-
                 <div class="layer-card">
-                     <div class="layer-header">
-                        <span class="layer-title">
-                            <span class="text-mt">Żoni u Rħula</span>
-                            <span class="text-en">Zones & Hamlets</span>
-                        </span>
+                    <div class="layer-header">
+                        <span class="layer-title">Zones</span>
                         <label class="switch"><input type="checkbox" checked onchange="toggleLayer('Zone Names', this)"><span class="slider"></span></label>
                     </div>
                 </div>
-
                 <div class="layer-card">
-                     <div class="layer-header">
-                        <span class="layer-title">
-                            <span class="text-mt">Postijiet ta' Interess</span>
-                            <span class="text-en">Points of Interest</span>
-                        </span>
+                    <div class="layer-header">
+                        <span class="layer-title">Places</span>
                         <label class="switch"><input type="checkbox" checked onchange="toggleLayer('Place Names', this)"><span class="slider"></span></label>
                     </div>
                 </div>
             </nav>
 
-            <div class="control-group language-toggle">
+            <div class="control-group">
                 <label><i class="hi-outline hi-globe"></i> Lingwa / Language</label>
                 <select id="language-select" onchange="toggleLanguage(this.value)">
                     <option value="mt" selected>Malti</option>
                     <option value="en">English</option>
                 </select>
             </div>
+
+            <div id="auth-status-area" class="auth-status"></div>
         </aside>
-    </div>
 
-    <button id="fab-add" class="fab-btn pointer-events-auto" onclick="toggleAddMode()">
-        <i class="hi-outline hi-plus"></i>
-        <span>
-            <span class="text-mt">Żid Post</span>
-            <span class="text-en">Add Place</span>
-        </span>
-    </button>
-
-    <div id="add-modal" class="modal-overlay hidden">
-        <div class="modal-card">
-            <div class="modal-header">
-                <h3>
-                    <span class="text-mt">Żid Post Ġdid</span>
-                    <span class="text-en">Add New Place</span>
-                </h3>
-                <button onclick="closeModal()"><i class="hi-outline hi-x"></i></button>
+        <aside id="inspector" class="inspector-panel pointer-events-auto hidden">
+            <div class="inspector-header">
+                <h2>Details</h2>
+                <button onclick="closeInspector()"><i class="hi-outline hi-x"></i></button>
             </div>
-            <form id="add-form" onsubmit="handleFormSubmit(event)">
-                <input type="hidden" id="new-lat">
-                <input type="hidden" id="new-lng">
-                
-                <div class="form-group">
-                    <label>
-                        <span class="text-mt">Isem (Malti/Ingliż)</span>
-                        <span class="text-en">Name (Malti/English)</span>
-                    </label>
-                    <input type="text" id="new-name" required placeholder="e.g. Ta' Qali">
+
+            <div id="view-mode">
+                <h1 id="insp-title">Title</h1>
+                <span id="insp-cat" class="label-chip" style="background:var(--accent); color:#0f172a;">Cat</span>
+                <div class="meta-row">
+                    <label>Lat/Lng:</label> <span id="insp-coords">...</span>
                 </div>
-                
+                <div class="history-section">
+                    <h4>History</h4>
+                    <ul id="insp-history-list"></ul>
+                </div>
+                <button id="btn-edit-trigger" onclick="enableEditMode()" class="btn-primary hidden">
+                    <i class="hi-outline hi-pencil"></i> Edit / Fork
+                </button>
+                <p id="login-warning" class="text-muted" style="text-align:center; font-size:0.75rem; margin-top:10px;">
+                    Log in to edit.
+                </p>
+            </div>
+
+            <form id="edit-mode" class="hidden" onsubmit="saveInspectorChanges(event)">
+                <input type="hidden" id="edit-id"><input type="hidden" id="edit-source">
+
                 <div class="form-group">
-                    <label>
-                        <span class="text-mt">Kategorija</span>
-                        <span class="text-en">Category</span>
-                    </label>
-                    <select id="new-category">
+                    <label>Name</label>
+                    <input type="text" id="edit-name" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="edit-category">
                         <option value="Place Names">Point of Interest</option>
                         <option value="Zone Names">Zone / Hamlet</option>
                         <option value="Local Council">Local Council</option>
                     </select>
                 </div>
 
-                <div class="modal-actions">
-                    <button type="button" class="btn-cancel" onclick="closeModal()">
-                        <span class="text-mt">Ikkanċella</span>
-                        <span class="text-en">Cancel</span>
-                    </button>
-                    <button type="submit" class="btn-save">
-                        <span class="text-mt">Issejvja</span>
-                        <span class="text-en">Save Place</span>
+                <div class="form-group">
+                    <label style="color:var(--accent);">Location (Drag marker to move)</label>
+                    <div style="display:flex; gap:10px">
+                        <input type="number" step="any" id="edit-lat" readonly style="opacity:0.6; cursor:not-allowed;">
+                        <input type="number" step="any" id="edit-lng" readonly style="opacity:0.6; cursor:not-allowed;">
+                    </div>
+                </div>
+
+                <div class="inspector-actions">
+                    <button type="button" class="btn-cancel" onclick="cancelEditMode()">Cancel</button>
+                    <button type="submit" class="btn-save">Save Changes</button>
+                </div>
+
+                <div id="delete-section" class="hidden" style="margin-top:20px; border-top:1px solid var(--glass-border); padding-top:15px;">
+                    <button type="button" class="btn-delete" onclick="deleteCurrentPlace()">
+                        <i class="hi-outline hi-trash"></i> Delete Place
                     </button>
                 </div>
+            </form>
+        </aside>
+    </div>
+
+    <button id="fab-add" class="fab-btn pointer-events-auto hidden" onclick="toggleAddMode()">
+        <i class="hi-outline hi-plus"></i><span>Add Place</span>
+    </button>
+
+    <div id="auth-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="auth-title">Login</h3>
+                <button onclick="closeAuthModal()"><i class="hi-outline hi-x"></i></button>
+            </div>
+            <form onsubmit="handleAuth(event)">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="auth-user" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="auth-pass" required>
+                </div>
+                <button type="submit" class="btn-primary" id="btn-auth-submit">Login</button>
+                <p style="text-align:center; color:#94a3b8; font-size:0.8rem; margin-top:15px; cursor:pointer;" onclick="toggleAuthMode()">
+                    <span id="auth-switch-text">No account? Register</span>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <div id="add-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>New Place</h3>
+                <button onclick="closeModal()"><i class="hi-outline hi-x"></i></button>
+            </div>
+            <form onsubmit="handleFormSubmit(event)">
+                <input type="hidden" id="new-lat"><input type="hidden" id="new-lng">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="new-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="new-category">
+                        <option value="Place Names">POI</option>
+                        <option value="Local Council">Council</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-save">Create Place</button>
             </form>
         </div>
     </div>
