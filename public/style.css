@@ -1,12 +1,48 @@
-body { margin: 0; font-family: 'Inter', sans-serif; overflow: hidden; background: #000; }
-#mapid { height: 100vh; width: 100vw; position: absolute; top:0; left:0; z-index: 1; }
-.ui-container { position: absolute; top: 20px; left: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; width: 250px; }
-.glass-card { background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-header h1 { font-size: 1rem; margin: 0; font-weight: 800; color: #000; text-transform: uppercase; }
-.layer-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; margin-bottom: 5px; font-weight: 600; }
-.sub-layer { margin-left: 15px; font-size: 0.75rem; color: #444; }
-.custom-placename-label span {
-    color: white; font-weight: 700; white-space: nowrap; pointer-events: none;
-    text-shadow: 0px 0px 4px #000, 0px 0px 8px #000;
+:root {
+    --accent: #3b82f6;
+    --bg-glass: rgba(255, 255, 255, 0.95);
+    --text-main: #0f172a;
+    --text-sub: #64748b;
 }
-.leaflet-tooltip-pane { display: none !important; }
+
+body { margin: 0; font-family: 'Inter', sans-serif; background: #000; overflow: hidden; }
+#mapid { height: 100vh; width: 100vw; position: absolute; z-index: 1; }
+
+.glass { background: var(--bg-glass); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+
+/* --- SIDEBAR --- */
+.sidebar {
+    position: absolute; top: 20px; left: 20px; bottom: 20px; width: 300px;
+    z-index: 1000; padding: 25px; border-radius: 24px;
+    display: flex; flex-direction: column; gap: 30px;
+}
+
+.brand h1 { font-size: 1.2rem; margin: 0; font-weight: 800; color: var(--text-main); text-transform: uppercase; letter-spacing: 1px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.dot-live { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 10px #22c55e; }
+.subtitle { font-size: 0.75rem; margin: 4px 0 0 18px; color: var(--text-sub); font-weight: 600; }
+
+section h3 { font-size: 0.7rem; text-transform: uppercase; color: var(--text-sub); margin-bottom: 15px; letter-spacing: 1px; }
+
+/* --- LAYER ROWS --- */
+.layer-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.sub-item { margin-left: 20px; opacity: 0.8; }
+.label-text { font-size: 0.85rem; font-weight: 600; color: #334155; }
+
+/* --- SWITCH UI --- */
+.switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 20px; }
+.slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+input:checked + .slider { background-color: var(--accent); }
+input:checked + .slider:before { transform: translateX(14px); }
+
+/* --- LABELS --- */
+.custom-label { background: none !important; border: none !important; }
+.custom-label span {
+    color: white; font-weight: 700; white-space: nowrap; pointer-events: none;
+    text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+.leaflet-tooltip-pane, .leaflet-shadow-pane { display: none !important; }
+
+#map-search { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0; font-family: inherit; font-size: 0.8rem; }

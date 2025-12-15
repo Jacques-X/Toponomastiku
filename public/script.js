@@ -1,4 +1,9 @@
-var mymap = L.map('mapid', { zoomControl: false, maxZoom: 22 }).setView([35.83, 14.47], 15);
+var mymap = L.map('mapid', { 
+    zoomControl: false, 
+    maxZoom: 22, 
+    minZoom: 12 
+}).setView([35.91, 14.45], 13);
+
 L.control.zoom({ position: 'bottomright' }).addTo(mymap);
 
 const renderedIds = new Set();
@@ -9,15 +14,18 @@ const groups = {
     "Boundaries": new L.FeatureGroup().addTo(mymap)
 };
 
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 19, maxNativeZoom: 19
+// --- LOCAL TILE ENGINE (Upscales level 19 tiles to 22) ---
+L.tileLayer('/local-tiles?z={z}&x={x}&y={y}', {
+    maxNativeZoom: 19,
+    maxZoom: 22,
+    attribution: 'Local Malta Cache'
 }).addTo(mymap);
 
 function renderLabel(lat, lng, text, category, id) {
     if (renderedIds.has(id)) return;
-    const sizes = { "Local Council": "15px", "Zone Names": "13px", "Place Names": "11px" };
+    const sizes = { "Local Council": "16px", "Zone Names": "13px", "Place Names": "11px" };
     const icon = L.divIcon({ 
-        className: 'custom-placename-label', 
+        className: 'custom-label', 
         html: `<span style="font-size:${sizes[category] || '11px'}">${text}</span>`,
         iconSize: [0, 0]
     });
@@ -28,7 +36,7 @@ function renderLabel(lat, lng, text, category, id) {
 async function load() {
     const res = await fetch('/api/placenames');
     const data = await res.json();
-    data.forEach(d => renderLabel(d.lat, d.lng, d.name, d.category, d.id));
+    data.forEach(d => renderLabel(d.lat, d.lng, d.name, d.category, 'db-'+d.id));
     fetchOSM();
 }
 
@@ -45,7 +53,7 @@ async function fetchOSM() {
                 let cat = "Place Names";
                 if (["city", "town", "village"].includes(n.tags.place)) cat = "Local Council";
                 else if (["suburb", "neighbourhood", "locality"].includes(n.tags.place)) cat = "Zone Names";
-                renderLabel(n.lat, n.lon, n.tags.name, cat, n.id);
+                renderLabel(n.lat, n.lon, n.tags.name, cat, 'osm-'+n.id);
             }
         });
         const ways = {};
@@ -54,7 +62,7 @@ async function fetchOSM() {
         });
         data.elements.filter(e => e.type === 'relation').forEach(rel => {
             rel.members.filter(m => m.type === 'way').forEach(m => {
-                if (ways[m.ref]) L.polyline(ways[m.ref], {color:'#fff', weight:1.5, opacity:0.6, dashArray:'2,6'}).addTo(groups["Boundaries"]);
+                if (ways[m.ref]) L.polyline(ways[m.ref], {color:'#fff', weight:1, opacity:0.6, dashArray:'2,6'}).addTo(groups["Boundaries"]);
             });
         });
     } catch (e) {}
@@ -64,7 +72,7 @@ const draw = new L.Control.Draw({ position: 'topright', draw: { marker: true, po
 mymap.addControl(draw);
 
 mymap.on(L.Draw.Event.CREATED, (e) => {
-    const name = prompt("Placename:");
+    const name = prompt("Name:");
     const cat = prompt("Category (Local Council, Zone Names, Place Names):", "Zone Names");
     if (name) {
         fetch('/api/placenames', {

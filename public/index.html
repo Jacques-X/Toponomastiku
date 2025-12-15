@@ -1,25 +1,67 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Toponomastiku Wiki</title>
+    <title>Toponomastiku Wiki | Malta</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div class="ui-container">
-        <div class="glass-card main-panel">
-            <header><h1>Toponomastiku</h1></header>
-        </div>
-        <div class="glass-card layer-panel">
-            <div class="layer-item"><input type="checkbox" checked onchange="toggleLayer('Local Council', this)"> <span>Local Council</span></div>
-            <div class="layer-item sub-layer"><input type="checkbox" checked onchange="toggleLayer('Boundaries', this)"> <span>Boundaries</span></div>
-            <div class="layer-item"><input type="checkbox" checked onchange="toggleLayer('Zone Names', this)"> <span>Zone Names</span></div>
-            <div class="layer-item"><input type="checkbox" checked onchange="toggleLayer('Place Names', this)"> <span>Place Names</span></div>
-        </div>
-    </div>
     <div id="mapid"></div>
+
+    <div class="sidebar glass">
+        <header>
+            <div class="brand">
+                <div class="dot-live"></div>
+                <h1>Toponomastiku</h1>
+            </div>
+            <p class="subtitle">Malta Toponymy Wiki</p>
+        </header>
+
+        <section class="wiki-controls">
+            <h3>Editor Tools</h3>
+            <p>Use the marker tool (top-right) to add missing names like <strong>Bubaqra</strong> or <strong>Nigret</strong>.</p>
+            <div id="search-container">
+                <input type="text" id="map-search" placeholder="Search for a place...">
+            </div>
+        </section>
+
+        <section class="layer-management">
+            <h3>Map Visualization</h3>
+            <div class="layer-group">
+                <div class="layer-row">
+                    <label class="switch">
+                        <input type="checkbox" checked onchange="toggleLayer('Local Council', this)">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="label-text">Local Councils</span>
+                </div>
+                <div class="layer-row sub-item">
+                    <label class="switch">
+                        <input type="checkbox" checked onchange="toggleLayer('Boundaries', this)">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="label-text">Council Boundaries</span>
+                </div>
+                <div class="layer-row">
+                    <label class="switch">
+                        <input type="checkbox" checked onchange="toggleLayer('Zone Names', this)">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="label-text">Zones & Hamlets</span>
+                </div>
+                <div class="layer-row">
+                    <label class="switch">
+                        <input type="checkbox" checked onchange="toggleLayer('Place Names', this)">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="label-text">Points of Interest</span>
+                </div>
+            </div>
+        </section>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     <script src="script.js"></script>
