@@ -1,0 +1,364 @@
+--- PROJECT STRUCTURE ---
+.
+./fix-tiles.js
+./server.js
+./script.js
+./public
+./public/index.html
+./public/script.js
+./public/style.css
+./package-lock.json
+./package.json
+./package_project.sh
+./style.css
+./map_data.db
+./project_context.txt
+./seed-tiles.js
+./package_context.sh
+./backups
+./backups/script_20251215_145201.js
+./backups/server_20251215_145201.js
+./backups/style_20251215_145201.css
+./turbo-seed.js
+./src
+./src/middleware
+./src/middleware/validate.js
+./src/routes
+./src/services
+
+
+--- SERVER.JS ---
+require('dotenv').config();
+const express = require('express');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+const helmet = require('helmet');
+const cors = require('cors');
+const fs = require('fs');
+const axios = require('axios');
+const { validatePlacename } = require('./src/middleware/validate');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const CACHE_DIR = path.join(__dirname, 'tile_cache');
+const db = new sqlite3.Database(process.env.DB_PATH || './map_data.db');
+
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+// --- TILE ENGINE SERVICE ---
+app.get('/tiles', async (req, res) => {
+    const { source, year, z, x, y, bbox, width, height } = req.query;
+
+    if (source === 'esri') {
+        const filePath = path.join(CACHE_DIR, `esri_${z}_${x}_${y}.jpg`);
+        return fs.existsSync(filePath) ? res.sendFile(filePath) : res.status(404).send('Offline');
+    }
+
+    if (source === 'pa') {
+        const remoteUrl = year === '1896' 
+            ? "https://geohub.gov.mt/arcgis/services/NSDI/Joint_Ordnance_Survey_1896/MapServer/WMSServer"
+            : "https://pamapserver.pa.org.mt/arcgis/services/MapServer/WMSServer";
+        
+        try {
+            const response = await axios({
+                method: 'get', url: remoteUrl,
+                params: {
+                    service: 'WMS', request: 'GetMap', version: '1.3.0',
+                    layers: year === '1896' ? '0' : `Orthos_${year}`,
+                    crs: 'EPSG:3857', bbox, width, height,
+                    format: 'image/png', transparent: 'true'
+                },
+                responseType: 'arraybuffer', timeout: 8000
+            });
+            res.set('Content-Type', 'image/png');
+            return res.send(response.data);
+        } catch (e) { res.status(502).send('PA Service Down'); }
+    }
+});
+
+// --- API ROUTES ---
+app.get('/api/placenames', (req, res) => {
+    db.all("SELECT * FROM placenames", [], (err, rows) => res.json(rows || []));
+});
+
+app.post('/api/placenames', validatePlacename, (req, res) => {
+    const { name, category, lat, lng } = req.body;
+    const id = "wiki-" + Date.now();
+    db.run(`INSERT INTO placenames (id, name, category, lat, lng) VALUES (?, ?, ?, ?, ?)`,
+        [id, name, category, lat, lng], 
+        (err) => err ? res.status(500).json({error: err.message}) : res.json({success: true, id})
+    );
+});
+
+app.listen(PORT, () => console.log(`🚀 Modular Server running on http://localhost:${PORT}`));
+
+
+--- PUBLIC/INDEX.HTML ---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toponomastiku Pro | Malta GIS</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/@heroicons/v1/outline/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div id="mapid"></div>
+
+    <div class="ui-wrapper pointer-events-none">
+        <aside class="sidebar pointer-events-auto">
+            <header class="sidebar-header">
+                <div class="logo-area">
+                    <i class="hi-outline hi-map big-icon"></i>
+                    <h1>Toponomastiku</h1>
+                </div>
+                <p>Malta Hybrid GIS Wiki v2.5</p>
+            </header>
+
+            <div class="control-group">
+                <label><i class="hi-outline hi-clock"></i> Timeline Layer</label>
+                <div class="select-wrapper">
+                    <select onchange="changeBaseLayer(this.value)" id="year-select">
+                        <option value="current">Current Satellite (ESRI)</option>
+                        <option value="2018">PA Orthophoto 2018</option>
+                        <option value="2012">PA Orthophoto 2012</option>
+                        <option value="1896">Ordnance Survey 1896</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label><i class="hi-outline hi-search"></i> Locate</label>
+                <div class="search-wrapper">
+                    <input type="text" id="map-search" placeholder="Find locality...">
+                </div>
+            </div>
+
+            <nav class="layer-manager">
+                <label><i class="hi-outline hi-layers"></i> Data Layers</label>
+                
+                <div class="layer-card">
+                    <div class="layer-header">
+                        <span class="layer-title">Local Councils</span>
+                        <label class="switch"><input type="checkbox" checked onchange="toggleLayer('Local Council', this)"><span class="slider"></span></label>
+                    </div>
+                    <div class="layer-sub">
+                        <label class="sub-checkbox">
+                            <input type="checkbox" checked onchange="toggleLayer('Boundaries', this)">
+                            <span>Administrative Borders</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="layer-card">
+                     <div class="layer-header">
+                        <span class="layer-title">Zones & Hamlets</span>
+                        <label class="switch"><input type="checkbox" checked onchange="toggleLayer('Zone Names', this)"><span class="slider"></span></label>
+                    </div>
+                </div>
+
+                <div class="layer-card">
+                     <div class="layer-header">
+                        <span class="layer-title">Points of Interest</span>
+                        <label class="switch"><input type="checkbox" checked onchange="toggleLayer('Place Names', this)"><span class="slider"></span></label>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="control-group language-toggle">
+                <label><i class="hi-outline hi-globe"></i> Lingwa / Language</label>
+                <select id="language-select">
+                    <option value="mt" selected>Malti</option>
+                    <option value="en">English</option>
+                </select>
+            </div>
+        </aside>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+
+
+--- PUBLIC/STYLE.CSS ---
+:root {
+    --bg-dark: #0f172a;
+    --glass-panel: rgba(15, 23, 42, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --accent: #38bdf8;
+    --text-bright: #f8fafc;
+    --text-muted: #94a3b8;
+}
+
+html { font-size: 16px; }
+body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-dark); line-height: 1.4; overflow: hidden; }
+#mapid { width: 100vw; height: 100vh; z-index: 1; }
+
+.leaflet-marker-pane, .leaflet-overlay-pane { z-index: 400; }
+.leaflet-bottom.leaflet-right { z-index: 800; margin-bottom: 12px; }
+
+.ui-wrapper { position: absolute; inset: 0; padding: 20px; z-index: 1000; display: flex; }
+.pointer-events-none { pointer-events: none; }
+.pointer-events-auto { pointer-events: auto; }
+
+/* SIDEBAR & LAYOUT FIXES */
+.sidebar {
+    width: 320px;
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 18px;
+    background: var(--glass-panel);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border-radius: 18px; border: 1px solid var(--glass-border);
+    box-shadow: 0 20px 45px rgba(0,0,0,.45);
+    max-height: calc(100vh - 40px);
+    overflow-y: auto; overflow-x: hidden; box-sizing: border-box;
+}
+
+.sidebar-header .logo-area { display: flex; align-items: center; gap: 10px; color: var(--accent); }
+.big-icon { font-size: 1.4rem; }
+.sidebar-header h1 { margin: 0; font-size: 1rem; font-weight: 800; letter-spacing: -0.4px; color: var(--text-bright); }
+.sidebar-header p { margin: 4px 0 0 30px; font-size: 0.75rem; color: var(--text-muted); }
+
+.control-group label, .layer-manager > label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+select, input[type="text"] { width: 100%; padding: 8px 10px; font-size: 0.875rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.35); color: var(--text-bright); outline: none; box-sizing: border-box; }
+select:focus, input:focus { border-color: var(--accent); }
+select option { background: var(--bg-dark); }
+
+.layer-card { background: rgba(255,255,255,0.035); border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.layer-header { display: flex; align-items: center; justify-content: space-between; min-height: 24px; }
+.layer-title { font-size: 0.85rem; font-weight: 600; color: var(--text-bright); }
+
+/* SUB-LAYER TEXT FIXES */
+.layer-sub { border-top: 1px solid var(--glass-border); padding-top: 10px; padding-left: 8px; display: flex; flex-direction: column; gap: 6px; }
+.sub-checkbox { display: flex; align-items: flex-start; gap: 10px; font-size: 0.75rem; color: var(--text-muted); }
+.sub-checkbox span { flex: 1; line-height: 1.3; word-break: break-word; }
+
+.switch { position: relative; width: 36px; height: 20px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; inset: 0; background: rgba(255,255,255,0.25); border-radius: 20px; cursor: pointer; transition: 0.3s; }
+.slider:before { content: ""; position: absolute; width: 16px; height: 16px; left: 2px; bottom: 2px; background: white; border-radius: 50%; transition: 0.3s; }
+input:checked + .slider { background: var(--accent); }
+input:checked + .slider:before { transform: translateX(16px); }
+
+/* MAP LABELS */
+.custom-label { display: block !important; background: transparent !important; border: none !important; pointer-events: none; }
+.custom-label .label-chip { position: relative; left: 50%; transform: translateX(-50%); display: inline-block; pointer-events: auto; max-width: 170px; padding: 4px 10px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(15, 23, 42, 0.9); border-radius: 20px; border: 1px solid rgba(255,255,255,0.18); color: #f8fafc; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; box-shadow: 0 4px 12px rgba(0,0,0,.35); text-shadow: none; }
+.chip-xl { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.6px; color: #f0f9ff; background: rgba(15, 23, 42, 0.96); border: 1px solid var(--accent); box-shadow: 0 0 0 1px rgba(56,189,248,0.45), 0 6px 14px rgba(0,0,0,0.45); }
+.chip-md { font-size: 0.64rem; font-weight: 600; letter-spacing: 0.3px; opacity: 0.9; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.12); color: #e5e7eb; box-shadow: 0 3px 8px rgba(0,0,0,0.35); }
+.chip-sm { font-size: 0.56rem; font-weight: 500; letter-spacing: 0.2px; opacity: 0.8; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255,255,255,0.08); color: #cbd5f5; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+.custom-label:hover .label-chip { background: rgba(15, 23, 42, 1); }
+
+/* SCROLLBAR */
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+
+--- PUBLIC/SCRIPT.JS ---
+var mymap = L.map('mapid', { zoomControl: false, maxZoom: 22, minZoom: 11 }).setView([35.91, 14.45], 13);
+L.control.zoom({ position: 'bottomright' }).addTo(mymap);
+
+const renderedIds = new Set();
+const searchIndex = [];
+
+// FeatureGroups for better event handling
+const groups = {
+    "Local Council": L.featureGroup().addTo(mymap),
+    "Boundaries": L.featureGroup().addTo(mymap),
+    "Zone Names": L.featureGroup().addTo(mymap),
+    "Place Names": L.featureGroup().addTo(mymap)
+};
+
+const esriLocal = L.tileLayer('/tiles?source=esri&z={z}&x={x}&y={y}', { 
+    maxNativeZoom: 19, maxZoom: 22, attribution: 'ESRI | PA' 
+}).addTo(mymap);
+let currentBase = esriLocal;
+
+window.changeBaseLayer = (val) => {
+    mymap.removeLayer(currentBase);
+    if (val === 'current') currentBase = esriLocal;
+    else currentBase = L.tileLayer.wms('/tiles', { 
+        source: 'pa', year: val, format: 'image/png', transparent: true, maxZoom: 20 
+    });
+    mymap.addLayer(currentBase);
+};
+
+// NEW RENDER FUNCTION: Uses CSS classes for sizing, not inline styles
+function renderLabel(lat, lng, text, category, id) {
+    if (renderedIds.has(id)) return;
+    renderedIds.add(id);
+    searchIndex.push({ name: text.toLowerCase(), lat, lng });
+
+    // Determine CSS class based on category
+    let sizeClass = 'chip-sm';
+    if (category === 'Local Council') sizeClass = 'chip-xl';
+    if (category === 'Zone Names') sizeClass = 'chip-md';
+
+    const icon = L.divIcon({
+    className: 'custom-label',
+    html: `<span class="label-chip ${sizeClass}">${text}</span>`,
+    iconSize: null,
+    iconAnchor: null
+    });
+
+    const marker = L.marker([lat, lng], {icon, interactive: true, bubble: true});
+    if (groups[category]) marker.addTo(groups[category]);
+}
+
+async function fetchOSM() {
+    console.log("Fetching Malta Geospatial Data...");
+    const bbox = "35.78,14.15,36.10,14.65";
+    const q = `[out:json][timeout:60];(rel["boundary"="administrative"]["admin_level"="8"](${bbox});node["place"](${bbox}););out body;>;out skel qt;`;
+    
+    try {
+        const r = await fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(q));
+        const d = await r.json();
+        const nodes = {};
+
+        d.elements.forEach(el => {
+            if (el.type === 'node') {
+                nodes[el.id] = [el.lat, el.lon];
+                if (el.tags && el.tags.name) {
+                    let cat = "Place Names";
+                    if (["city", "town", "village"].includes(el.tags.place)) cat = "Local Council";
+                    else if (["suburb", "neighbourhood", "locality"].includes(el.tags.place)) cat = "Zone Names";
+                    renderLabel(el.lat, el.lon, el.tags.name, cat, 'osm-'+el.id);
+                }
+            }
+        });
+
+        // Enhanced Boundaries: Neon Blue Glow
+        d.elements.filter(e => e.type === 'way').forEach(w => {
+            const lls = w.nodes.map(id => nodes[id]).filter(n => n);
+            if (lls.length > 1) {
+                // Outer Glow
+                L.polyline(lls, {color: '#38bdf8', weight: 6, opacity: 0.3, lineJoin: 'round'}).addTo(groups["Boundaries"]);
+                // Inner crisp line
+                L.polyline(lls, {color: '#f0f9ff', weight: 1.5, opacity: 0.9, dashArray: '6, 8', lineJoin: 'round'}).addTo(groups["Boundaries"]);
+            }
+        });
+        console.log("OSM Data Loaded.");
+    } catch (e) { console.error("OSM Error:", e); }
+}
+
+window.toggleLayer = (n, el) => {
+    if (el.checked) mymap.addLayer(groups[n]);
+    else mymap.removeLayer(groups[n]);
+};
+
+document.getElementById('map-search').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        const res = searchIndex.find(i => i.name.includes(e.target.value.toLowerCase()));
+        if (res) mymap.flyTo([res.lat, res.lng], 17, {duration: 1.5});
+    }
+});
+
+// Wait for map to be ready before loading data layers
+mymap.whenReady(() => { fetchOSM(); });

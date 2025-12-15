@@ -1,0 +1,17 @@
+
+/* ---------- LANGUAGE TOGGLE ---------- */
+.language-toggle select {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 0.875rem;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+    background: rgba(0,0,0,0.35);
+    color: var(--text-bright);
+    outline: none;
+    box-sizing: border-box;
+}
+
+.language-toggle select:focus {
+    border-color: var(--accent);
+}

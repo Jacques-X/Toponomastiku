@@ -1,26 +1,169 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Toponomastiku Pro</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toponomastiku Pro | Malta GIS</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/@heroicons/v1/outline/style.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css" />
 </head>
-<body>
-    <div id="mapid"></div>
-    <div class="sidebar">
-        <header><div class="brand"><h1>Toponomastiku</h1></div><p style="font-size:0.7rem; color:#64748b; margin-top:5px;">Malta Map Wiki</p></header>
-        <section><h3>Timeline</h3><select onchange="changeBaseLayer(this.value)" id="year-select" style="width:100%; padding:8px; border-radius:8px;"><option value="current">Current (Local)</option><option value="2018">PA 2018 (Real-time)</option><option value="2012">PA 2012 (Real-time)</option><option value="1896">Ordnance 1896 (Real-time)</option></select></section>
-        <section><h3>Search</h3><input type="text" id="map-search" placeholder="Type name & hit Enter..."></section>
-        <section><h3>Layers</h3>
-            <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('Local Council', this)"> Council Names</div>
-            <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('Boundaries', this)"> Boundaries</div>
-            <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('Zone Names', this)"> Zones & Hamlets</div>
-            <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('Place Names', this)"> Points of Interest</div>
-        </section>
+<body class="lang-mt"> <div id="mapid"></div>
+
+    <div class="ui-wrapper pointer-events-none">
+        <aside class="sidebar pointer-events-auto">
+            <header class="sidebar-header">
+                <div class="logo-area">
+                    <i class="hi-outline hi-map big-icon"></i>
+                    <h1>Toponomastiku</h1>
+                </div>
+                <p>
+                    <span class="text-mt">Wiki GIS Ibrida Verżjoni 3.0</span>
+                    <span class="text-en">Hybrid GIS Wiki v3.0</span>
+                </p>
+            </header>
+
+            <div class="control-group">
+                <label>
+                    <i class="hi-outline hi-clock"></i> 
+                    <span class="text-mt">Kronoloġija</span>
+                    <span class="text-en">Timeline</span>
+                </label>
+                <div class="select-wrapper">
+                    <select onchange="changeBaseLayer(this.value)" id="year-select">
+                        <option value="current">Current Satellite (ESRI)</option>
+                        <option value="2018">PA Orthophoto 2018</option>
+                        <option value="2012">PA Orthophoto 2012</option>
+                        <option value="1896">Ordnance Survey 1896</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <i class="hi-outline hi-search"></i> 
+                    <span class="text-mt">Fittex</span>
+                    <span class="text-en">Search</span>
+                </label>
+                <div class="search-wrapper">
+                    <input type="text" id="map-search" placeholder="...">
+                </div>
+            </div>
+
+            <nav class="layer-manager">
+                <label>
+                    <i class="hi-outline hi-layers"></i> 
+                    <span class="text-mt">Saffi tad-Data</span>
+                    <span class="text-en">Data Layers</span>
+                </label>
+                
+                <div class="layer-card">
+                    <div class="layer-header">
+                        <span class="layer-title">
+                            <span class="text-mt">Kunsilli Lokali</span>
+                            <span class="text-en">Local Councils</span>
+                        </span>
+                        <label class="switch"><input type="checkbox" checked onchange="toggleLayer('Local Council', this)"><span class="slider"></span></label>
+                    </div>
+                    <div class="layer-sub">
+                        <label class="sub-checkbox">
+                            <input type="checkbox" checked onchange="toggleLayer('Boundaries', this)">
+                            <span>
+                                <span class="text-mt">Fruntieri Amministrattivi</span>
+                                <span class="text-en">Administrative Borders</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="layer-card">
+                     <div class="layer-header">
+                        <span class="layer-title">
+                            <span class="text-mt">Żoni u Rħula</span>
+                            <span class="text-en">Zones & Hamlets</span>
+                        </span>
+                        <label class="switch"><input type="checkbox" checked onchange="toggleLayer('Zone Names', this)"><span class="slider"></span></label>
+                    </div>
+                </div>
+
+                <div class="layer-card">
+                     <div class="layer-header">
+                        <span class="layer-title">
+                            <span class="text-mt">Postijiet ta' Interess</span>
+                            <span class="text-en">Points of Interest</span>
+                        </span>
+                        <label class="switch"><input type="checkbox" checked onchange="toggleLayer('Place Names', this)"><span class="slider"></span></label>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="control-group language-toggle">
+                <label><i class="hi-outline hi-globe"></i> Lingwa / Language</label>
+                <select id="language-select" onchange="toggleLanguage(this.value)">
+                    <option value="mt" selected>Malti</option>
+                    <option value="en">English</option>
+                </select>
+            </div>
+        </aside>
     </div>
+
+    <button id="fab-add" class="fab-btn pointer-events-auto" onclick="toggleAddMode()">
+        <i class="hi-outline hi-plus"></i>
+        <span>
+            <span class="text-mt">Żid Post</span>
+            <span class="text-en">Add Place</span>
+        </span>
+    </button>
+
+    <div id="add-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>
+                    <span class="text-mt">Żid Post Ġdid</span>
+                    <span class="text-en">Add New Place</span>
+                </h3>
+                <button onclick="closeModal()"><i class="hi-outline hi-x"></i></button>
+            </div>
+            <form id="add-form" onsubmit="handleFormSubmit(event)">
+                <input type="hidden" id="new-lat">
+                <input type="hidden" id="new-lng">
+                
+                <div class="form-group">
+                    <label>
+                        <span class="text-mt">Isem (Malti/Ingliż)</span>
+                        <span class="text-en">Name (Malti/English)</span>
+                    </label>
+                    <input type="text" id="new-name" required placeholder="e.g. Ta' Qali">
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <span class="text-mt">Kategorija</span>
+                        <span class="text-en">Category</span>
+                    </label>
+                    <select id="new-category">
+                        <option value="Place Names">Point of Interest</option>
+                        <option value="Zone Names">Zone / Hamlet</option>
+                        <option value="Local Council">Local Council</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModal()">
+                        <span class="text-mt">Ikkanċella</span>
+                        <span class="text-en">Cancel</span>
+                    </button>
+                    <button type="submit" class="btn-save">
+                        <span class="text-mt">Issejvja</span>
+                        <span class="text-en">Save Place</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
