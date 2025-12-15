@@ -1,67 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Toponomastiku Wiki | Malta</title>
+    <title>Toponomastiku Pro</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
     <div id="mapid"></div>
-
-    <div class="sidebar glass">
-        <header>
-            <div class="brand">
-                <div class="dot-live"></div>
-                <h1>Toponomastiku</h1>
-            </div>
-            <p class="subtitle">Malta Toponymy Wiki</p>
-        </header>
-
-        <section class="wiki-controls">
-            <h3>Editor Tools</h3>
-            <p>Use the marker tool (top-right) to add missing names like <strong>Bubaqra</strong> or <strong>Nigret</strong>.</p>
-            <div id="search-container">
-                <input type="text" id="map-search" placeholder="Search for a place...">
-            </div>
-        </section>
-
-        <section class="layer-management">
-            <h3>Map Visualization</h3>
-            <div class="layer-group">
-                <div class="layer-row">
-                    <label class="switch">
-                        <input type="checkbox" checked onchange="toggleLayer('Local Council', this)">
-                        <span class="slider"></span>
-                    </label>
-                    <span class="label-text">Local Councils</span>
-                </div>
-                <div class="layer-row sub-item">
-                    <label class="switch">
-                        <input type="checkbox" checked onchange="toggleLayer('Boundaries', this)">
-                        <span class="slider"></span>
-                    </label>
-                    <span class="label-text">Council Boundaries</span>
-                </div>
-                <div class="layer-row">
-                    <label class="switch">
-                        <input type="checkbox" checked onchange="toggleLayer('Zone Names', this)">
-                        <span class="slider"></span>
-                    </label>
-                    <span class="label-text">Zones & Hamlets</span>
-                </div>
-                <div class="layer-row">
-                    <label class="switch">
-                        <input type="checkbox" checked onchange="toggleLayer('Place Names', this)">
-                        <span class="slider"></span>
-                    </label>
-                    <span class="label-text">Points of Interest</span>
-                </div>
-            </div>
+    <div class="sidebar">
+        <header><div class="brand"><h1>Toponomastiku</h1></div><p style="font-size:0.7rem; color:#64748b; margin-top:5px;">Malta Map Wiki</p></header>
+        <section><h3>Timeline</h3><select onchange="changeBaseLayer(this.value)" id="year-select" style="width:100%; padding:8px; border-radius:8px;"><option value="current">Current (Local)</option><option value="2018">PA 2018 (Real-time)</option><option value="2012">PA 2012 (Real-time)</option><option value="1896">Ordnance 1896 (Real-time)</option></select></section>
+        <section><h3>Search</h3><input type="text" id="map-search" placeholder="Type name & hit Enter..."></section>
+        <section><h3>Layers</h3>
+            <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('Local Council', this)"> Council Names</div>
+            <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('Boundaries', this)"> Boundaries</div>
+            <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('Zone Names', this)"> Zones & Hamlets</div>
+            <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('Place Names', this)"> Points of Interest</div>
         </section>
     </div>
-
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     <script src="script.js"></script>

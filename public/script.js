@@ -1,37 +1,44 @@
-var mymap = L.map('mapid', { 
-    zoomControl: false, 
-    maxZoom: 22, 
-    minZoom: 12 
-}).setView([35.91, 14.45], 13);
-
+var mymap = L.map('mapid', { zoomControl: false, maxZoom: 22, zoomSnap: 1 }).setView([35.91, 14.45], 13);
 L.control.zoom({ position: 'bottomright' }).addTo(mymap);
 
 const renderedIds = new Set();
+const searchIndex = [];
 const groups = {
-    "Local Council": new L.FeatureGroup().addTo(mymap),
-    "Zone Names": new L.FeatureGroup().addTo(mymap),
-    "Place Names": new L.FeatureGroup().addTo(mymap),
-    "Boundaries": new L.FeatureGroup().addTo(mymap)
+    "Local Council": new L.LayerGroup().addTo(mymap),
+    "Boundaries": new L.LayerGroup().addTo(mymap),
+    "Zone Names": new L.LayerGroup().addTo(mymap),
+    "Place Names": new L.LayerGroup().addTo(mymap)
 };
 
-// --- LOCAL TILE ENGINE (Upscales level 19 tiles to 22) ---
-L.tileLayer('/local-tiles?z={z}&x={x}&y={y}', {
-    maxNativeZoom: 19,
-    maxZoom: 22,
-    attribution: 'Local Malta Cache'
-}).addTo(mymap);
+const esriLocal = L.tileLayer('/tiles?source=esri&z={z}&x={x}&y={y}', { maxNativeZoom: 19, maxZoom: 22 }).addTo(mymap);
+let currentBase = esriLocal;
+
+window.changeBaseLayer = (val) => {
+    mymap.removeLayer(currentBase);
+    if (val === 'current') currentBase = esriLocal;
+    else currentBase = L.tileLayer.wms('/tiles', { source: 'pa', year: val, format: 'image/png', transparent: true, maxZoom: 20 });
+    mymap.addLayer(currentBase);
+};
 
 function renderLabel(lat, lng, text, category, id) {
     if (renderedIds.has(id)) return;
+    searchIndex.push({ name: text.toLowerCase(), lat, lng });
     const sizes = { "Local Council": "16px", "Zone Names": "13px", "Place Names": "11px" };
     const icon = L.divIcon({ 
         className: 'custom-label', 
-        html: `<span style="font-size:${sizes[category] || '11px'}">${text}</span>`,
-        iconSize: [0, 0]
+        html: `<span style="font-size:${sizes[category] || '11px'}">${text}</span>`, 
+        iconSize: [200, 40], iconAnchor: [100, 20] 
     });
     L.marker([lat, lng], {icon, interactive: false}).addTo(groups[category] || groups["Place Names"]);
     renderedIds.add(id);
 }
+
+document.getElementById('map-search').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        const res = searchIndex.find(i => i.name.includes(e.target.value.toLowerCase()));
+        if (res) mymap.flyTo([res.lat, res.lng], 18);
+    }
+});
 
 async function load() {
     const res = await fetch('/api/placenames');
@@ -42,45 +49,28 @@ async function load() {
 
 async function fetchOSM() {
     const bbox = "35.78,14.15,36.10,14.65";
-    const q = `[out:json][timeout:30];(rel["boundary"="administrative"]["admin_level"="8"](${bbox});node["place"~"city|town|village|suburb|neighbourhood|locality|hamlet"](${bbox}););out body;>;out skel qt;`;
+    const q = `[out:json][timeout:30];(rel["boundary"="administrative"]["admin_level"="8"](${bbox});node["place"](${bbox}););out body;>;out skel qt;`;
     try {
-        const res = await fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(q));
-        const data = await res.json();
+        const r = await fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(q));
+        const d = await r.json();
         const nodes = {};
-        data.elements.filter(e => e.type === 'node').forEach(n => {
-            nodes[n.id] = [n.lat, n.lon];
-            if (n.tags && n.tags.name) {
-                let cat = "Place Names";
-                if (["city", "town", "village"].includes(n.tags.place)) cat = "Local Council";
-                else if (["suburb", "neighbourhood", "locality"].includes(n.tags.place)) cat = "Zone Names";
-                renderLabel(n.lat, n.lon, n.tags.name, cat, 'osm-'+n.id);
+        d.elements.forEach(el => {
+            if (el.type === 'node') {
+                nodes[el.id] = [el.lat, el.lon];
+                if (el.tags && el.tags.name) {
+                    let cat = "Place Names";
+                    if (["city", "town", "village"].includes(el.tags.place)) cat = "Local Council";
+                    else if (["suburb", "neighbourhood", "locality"].includes(el.tags.place)) cat = "Zone Names";
+                    renderLabel(el.lat, el.lon, el.tags.name, cat, 'osm-'+el.id);
+                }
             }
         });
-        const ways = {};
-        data.elements.filter(e => e.type === 'way').forEach(w => {
-            ways[w.id] = w.nodes.map(nid => nodes[nid]).filter(n => n !== undefined);
-        });
-        data.elements.filter(e => e.type === 'relation').forEach(rel => {
-            rel.members.filter(m => m.type === 'way').forEach(m => {
-                if (ways[m.ref]) L.polyline(ways[m.ref], {color:'#fff', weight:1, opacity:0.6, dashArray:'2,6'}).addTo(groups["Boundaries"]);
-            });
+        d.elements.filter(e => e.type === 'way').forEach(w => {
+            const lls = w.nodes.map(id => nodes[id]).filter(n => n);
+            if (lls.length > 1) L.polyline(lls, {color:'#fff', weight:1.5, opacity:0.6, dashArray:'2,6'}).addTo(groups["Boundaries"]);
         });
     } catch (e) {}
 }
-
-const draw = new L.Control.Draw({ position: 'topright', draw: { marker: true, polyline:false, polygon:false, circle:false, rectangle:false, circlemarker:false } });
-mymap.addControl(draw);
-
-mymap.on(L.Draw.Event.CREATED, (e) => {
-    const name = prompt("Name:");
-    const cat = prompt("Category (Local Council, Zone Names, Place Names):", "Zone Names");
-    if (name) {
-        fetch('/api/placenames', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ name, category: cat, lat: e.layer.getLatLng().lat, lng: e.layer.getLatLng().lng })
-        }).then(() => location.reload());
-    }
-});
 
 window.toggleLayer = (n, el) => el.checked ? mymap.addLayer(groups[n]) : mymap.removeLayer(groups[n]);
 load();
